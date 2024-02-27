@@ -25,17 +25,21 @@ namespace Connection
         private ColorNode _currentConnectionMainNode;
         private ColorConnector _currentColorConnector;
 
+        private Rect _bounds;
 
         private void Awake()
         {
             _nodes = colorNodesContainer.GetComponentsInChildren<ColorNode>();
 
             var nodeTargets = colorNodesContainer.GetComponentsInChildren<ColorNodeTarget>(true);
-            foreach (var nodeTarget in nodeTargets)
+
+			foreach (var nodeTarget in nodeTargets)
             {
                 nodeTarget.TargetCompletionChangeEvent += OnTargetCompletionChange;
                 _completionsByTargetNode[nodeTarget] = nodeTarget.IsCompleted;
-            }
+			}
+
+            _bounds = RectUtils.GetBoundingRect(_nodes.Select(node => (Vector2)node.transform.position));
 
             _clickHandler = ClickHandler.Instance;
             _clickHandler.SetDragEventHandlers(OnDragStart, OnDragEnd);
@@ -51,7 +55,6 @@ namespace Connection
             _currentColorConnector = Instantiate(colorConnector, colorNode.transform);
             _currentColorConnector.StartConnecting(colorNode.CenterPosition, colorNode.Color);
             _currentColorConnector.gameObject.SetActive(true);
-
             _currentConnectionMainNode = colorNode;
         }
 
@@ -119,11 +122,17 @@ namespace Connection
                 return;
 
             if (TryGetColorNodeInPosition(startPosition, out var colorNode) && !colorNode.IsEmpty)
+            {
                 StartConnecting(colorNode);
+            } else
+            {
+                CameraPanningManager.Instance?.StartPanning(_bounds);
+            }
         }
 
         private void OnDragEnd(Vector3 finishPosition)
         {
+            CameraPanningManager.Instance?.EndPanning();
             if (PlayerController.PlayerState != PlayerState.Connecting)
                 return;
 
